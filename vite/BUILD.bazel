@@ -1,0 +1,25 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "defs.bzl",
+    "launcher.mjs",
+])
+
+# aspect_rules_js requires cross-package JS data deps to be wrapped in
+# a js_library so the file gets copied into the consumer's output tree.
+# `vitest_test` references this label as its `entry_point`; consumers
+# never name it.
+js_library(
+    name = "launcher",
+    srcs = ["launcher.mjs"],
+)
+
+bzl_library(
+    name = "defs_bzl",
+    srcs = ["defs.bzl"],
+    visibility = ["//docs:__pkg__"],
+    deps = ["@aspect_rules_js//js:defs"],
+)

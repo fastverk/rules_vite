@@ -1,0 +1,16 @@
+load("@rules_vite//vite:defs.bzl", "vitest_test")
+load("@smoke_npm//:defs.bzl", "npm_link_all_packages")
+
+package(default_visibility = ["//visibility:public"])
+
+npm_link_all_packages(name = "node_modules")
+
+exports_files(["pnpm-lock.yaml"])
+
+# Smoke: a real `vitest_test` exercising the macro end-to-end against
+# the pinned smoke npm workspace. Used as a release gate.
+vitest_test(
+    name = "smoke_test",
+    srcs = ["sum.test.ts"],
+    deps = [":node_modules/vitest"],
+)

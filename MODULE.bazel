@@ -1,0 +1,48 @@
+module(
+    name = "rules_vite",
+    version = "0.1.0",
+    compatibility_level = 1,
+)
+
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+
+# `aspect_rules_js` is the runtime dep — the macro emits `js_test`
+# targets and the launcher is wrapped in a `js_library` so it can be
+# used as a cross-package `entry_point`. Consumers also need a node
+# toolchain (typically `rules_nodejs`), but rules_vite doesn't pin
+# one — the consumer's workspace owns that decision.
+bazel_dep(name = "aspect_rules_js", version = "3.1.2")
+
+# Dev-only: docs/BUILD.bazel uses stardoc to generate the .md
+# reference docs and diff-test them against the committed copies.
+bazel_dep(name = "stardoc", version = "0.7.2", dev_dependency = True)
+
+# Dev-only: docs/update.sh runs as `bazel run //docs:update` to copy
+# regenerated .md files back into the source tree. rules_shell hosts
+# the sh_binary rule.
+bazel_dep(name = "rules_shell", version = "0.6.1", dev_dependency = True)
+
+# Dev-only end-to-end smoke: pulls a tiny pnpm workspace with vitest
+# pinned, runs a real `vitest_test` target under Bazel. Consumers
+# don't see any of this — they bring their own aspect_rules_js +
+# rules_nodejs in their MODULE.bazel.
+bazel_dep(name = "rules_nodejs", version = "6.7.4", dev_dependency = True)
+
+node = use_extension(
+    "@rules_nodejs//nodejs:extensions.bzl",
+    "node",
+    dev_dependency = True,
+)
+node.toolchain(node_version = "22.11.0")
+
+npm = use_extension(
+    "@aspect_rules_js//npm:extensions.bzl",
+    "npm",
+    dev_dependency = True,
+)
+npm.npm_translate_lock(
+    name = "smoke_npm",
+    pnpm_lock = "//examples/smoke:pnpm-lock.yaml",
+)
+use_repo(npm, "smoke_npm")

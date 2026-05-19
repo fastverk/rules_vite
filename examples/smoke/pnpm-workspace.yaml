@@ -1,0 +1,7 @@
+packages: []
+
+# aspect_rules_js wants `onlyBuiltDependencies` enumerated. The smoke
+# example pulls vitest, which transitively depends on esbuild — esbuild
+# runs a postinstall to place the platform binary. Nothing else builds.
+onlyBuiltDependencies:
+  - esbuild

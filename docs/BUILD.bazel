@@ -1,0 +1,29 @@
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
+
+package(default_visibility = ["//visibility:public"])
+
+# Reference docs are stardoc-generated *and* committed to source. The
+# diff_test gates assert the committed file matches what stardoc
+# produces from the .bzl docstrings; CI fails if someone changes a
+# rule without running `bazel run //docs:update`.
+
+stardoc(
+    name = "defs_doc",
+    out = "defs.md.generated",
+    input = "//vite:defs.bzl",
+    deps = ["//vite:defs_bzl"],
+)
+
+diff_test(
+    name = "defs_doc_up_to_date",
+    file1 = "defs.md",
+    file2 = ":defs_doc",
+)
+
+sh_binary(
+    name = "update",
+    srcs = ["update.sh"],
+    data = [":defs_doc"],
+)
