@@ -67,6 +67,40 @@ const srcs = process.argv.slice(2).map(absifyRunfilesPath);
 
 const args = [vitestBin, 'run'];
 if (config) args.push('--config', config);
+
+// ── JUnit for Bazel / GitLab CI ──────────────────────────────────────────────
+// Bazel sets XML_OUTPUT_FILE for every test action and treats whatever the test
+// writes there as the canonical `test.xml`. By default a `bazel test` produces a
+// SYNTHETIC test.xml with one <testcase> per Bazel TARGET (the real per-test
+// cases buried in <system-out>). Pointing vitest's `junit` reporter at
+// XML_OUTPUT_FILE instead yields real per-test cases — which GitLab ingests via
+// `artifacts:reports:junit`. Passed on the CLI (not via the config file) so it
+// applies uniformly even when a target supplies its own per-dir vitest config,
+// and so it's the launcher process — which always has XML_OUTPUT_FILE — that
+// resolves it. `--reporter=default` keeps the console output.
+const xmlOut = process.env.XML_OUTPUT_FILE;
+if (xmlOut) {
+    args.push('--reporter=default', '--reporter=junit', `--outputFile.junit=${xmlOut}`);
+}
+
+// ── Coverage opt-in (VITEST_COVERAGE=1) ──────────────────────────────────────
+// Write a cobertura report into Bazel's per-test undeclared-outputs dir (Bazel
+// zips it into testlogs/<target>/test.outputs/outputs.zip); CI extracts + merges
+// the per-target reports into one cobertura.xml for GitLab's coverage_report.
+// Requires the consumer to add `@vitest/coverage-v8` to the target's deps.
+if (process.env.VITEST_COVERAGE === '1') {
+    const covDir = process.env.TEST_UNDECLARED_OUTPUTS_DIR
+        ? path.join(process.env.TEST_UNDECLARED_OUTPUTS_DIR, 'coverage')
+        : 'coverage';
+    args.push(
+        '--coverage',
+        '--coverage.provider=v8',
+        '--coverage.reporter=cobertura',
+        '--coverage.reporter=text-summary',
+        `--coverage.reportsDirectory=${covDir}`,
+    );
+}
+
 args.push(...srcs);
 
 const child = spawn(process.execPath, args, { stdio: 'inherit' });
